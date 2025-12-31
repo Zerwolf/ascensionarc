@@ -1,0 +1,1900 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ascension Arc — Team Builder (Genshin)</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#0f1720; --muted:#9aa6b2; --accent:#7dd3fc; --glass: rgba(255,255,255,0.04);
+      --left-width:42%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021 0%, #08121a 60%);color:#e6eef6}
+    .app{display:flex;gap:18px;padding:22px;height:100vh;box-sizing:border-box}
+
+    @font-face {
+  font-family: 'HYWenHei';
+  src: url('fonts/HYWenHei-85W.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Element hue mapping (shared system) */
+.element-pyro    { --element-hue: 8; }
+.element-hydro   { --element-hue: 210; }
+.element-anemo   { --element-hue: 140; }
+.element-electro { --element-hue: 275; }
+.element-cryo    { --element-hue: 195; }
+.element-geo     { --element-hue: 45; }
+.element-dendro  { --element-hue: 95; }
+
+    /* Left (featured) and Right (supports) */
+    .pane{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+    .left{width:var(--left-width);display:flex;flex-direction:column;align-items:stretch}
+    .right{flex:1;display:flex;flex-direction:column;gap:12px}
+
+    /* Featured character card - vertical */
+    .featured {
+  display: flex;
+  position: relative;
+  gap: 14px;
+  flex: 1;
+  min-height: 0; /* CRITICAL for flex layouts */
+}
+    .art {
+  position: relative;
+}
+
+/* Container for sliders */
+.art-controls {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.55),
+    rgba(0,0,0,0)
+  );
+
+  padding: 8px;
+  border-radius: 8px;
+
+  z-index: 2;
+  box-sizing: border-box;
+}
+
+/* Show controls only when hovering the art */
+.art:hover .art-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Slider styling */
+.art-controls input[type="range"] {
+  flex: 1;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.25);
+  cursor: pointer;
+}
+
+.art-controls input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+}
+
+    .featured .info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+    .art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  transform:
+    translate(
+      var(--art-tx, 0px),
+      var(--art-ty, 0px)
+    )
+    scale(var(--art-zoom, 1));
+
+  transition: transform 0.15s ease;
+}
+    h1{margin:0;font-size:20px}
+    .meta{display:flex;gap:8px;align-items:center}
+
+    select,input[type=number]{background:var(--glass);border:1px solid rgba(255,255,255,0.03);color:var(--muted);padding:8px;border-radius:8px}
+    label{font-size:13px;color:var(--muted)}
+
+    .row{display:flex;gap:8px;align-items:center}
+    .field{display:flex;flex-direction:column;gap:6px}
+
+    /* supports layout: three compact cards stacked */
+    .support-list{display:flex;flex-direction:column;gap:12px}
+
+.support-card {
+  height: 153px;          /* fixed overall height */
+  max-height: 153px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  grid-template-rows: 72px auto;
+  gap: 14px 18px;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+}
+
+.support-portrait {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+
+  top: 1px;
+  width: 160px;
+  height: 150px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.support-portrait img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+}
+
+.support-element {
+  display: flex;
+  align-items: center;
+}
+
+.support-element img {
+  width: 56px;
+  height: 56px;
+}
+
+.support-top {
+  grid-column: 2;
+  grid-row: 1;
+
+  display: flex;
+  bottom: 8px;
+  align-items: center;
+}
+
+.support-name {
+  font-family: 'HYWenHei', system-ui, sans-serif;
+  font-size: 30px;
+}
+
+.support-const {
+  width: 56px;
+  height: 56px;
+  cursor: pointer;
+}
+
+.support-bottom {
+  grid-column: 2;
+  grid-row: 2;
+  bottom: 28px;
+  right: 12px;
+  display: flex;
+  align-items: flex-start;
+  height: 72px;
+}
+
+.support-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;       /* tighter */
+  width: 110px;
+  text-align: center;
+}
+
+.support-picker img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.support-picker span {
+  font-size: 14px;
+  color: var(--muted);
+
+  width: 100%;
+  max-width: 110px;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;   /* max 2 lines */
+
+  overflow: hidden;
+  line-height: 1.2;
+  text-align: center;
+}
+
+    /* Team controls/footer */
+    .team-controls{margin-top:12px;display:flex;gap:12px;align-items:center}
+    .rating-btn{padding:8px 10px;border-radius:8px;border:none;cursor:pointer;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
+    .rating-btn.active{background:linear-gradient(90deg,#2b6cb0,#7c3aed);color:white;border:0}
+
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03)}
+
+    footer{position:fixed;left:22px;bottom:22px;color:var(--muted);font-size:13px}
+
+    /* responsive */
+    @media(max-width:1000px){.app{flex-direction:column;padding:12px}.left{width:auto}.featured .art{width:160px;height:300px}}
+
+    .icon-picker {
+  position: relative;
+}
+
+.picker-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.picker-menu {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  z-index: 1000;
+  width: 260px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #0f1720;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.picker-menu.hidden {
+  display: none;
+}
+
+.picker-item {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  position: relative;
+}
+
+.picker-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.picker-item span {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 11px;
+  color: gold;
+}
+
+.character-subtitle {
+  font-family: 'HYWenHei', system-ui, sans-serif;
+  font-size: 16px;
+  font-style: italic;
+  color: var(--muted);
+  margin-top: 4px;
+  display: block;
+}
+
+.rating-grid {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.rating-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+}
+.rating-row span {
+  font-size: 14px;
+}
+
+.rating-icon {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.progress-percent {
+  width: 64px;
+  background: var(--glass);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #e6eef6;
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.rating-final {
+  width: 312px;
+  height: 312px;
+  min-height: 248px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rating-final img {
+  width: 240px;
+  height: 240px;
+  cursor: pointer;
+}
+
+.featured-header {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.featured-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.featured-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.featured-name select {
+  font-size: 16px;
+  padding: 8px 10px;
+}
+
+.const-icon {
+  width: 100px;
+  height: 100px;
+  cursor: pointer;
+}
+
+.featured-affiliation img {
+  width: 100px;
+  height: 100px;
+}
+
+.featured-affiliation span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.featured-element img {
+  width: 100px;
+  height: 100px;
+}
+
+.featured-header {
+  align-items: flex-start;
+}
+
+.featured-pickers {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.featured-progress {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 18px;
+  margin-top: 28px;
+  justify-content: space-between;
+}
+
+.progress-row {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+}
+
+.progress-row img {
+  width: 44px;
+  height: 44px;
+}
+
+.progress-row.overall {
+  min-width: 100px;
+}
+
+.progress-row.overall .progress-percent-text {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.progress-row.overall img {
+  width: 64px;
+  height: 64px;
+}
+
+.progress-row label {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.progress-row.overall .progress-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-percent-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e6eef6;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.progress-percent-text:hover {
+  text-decoration: underline;
+  opacity: 1;
+}
+
+.progress-row.overall span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.picker-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.picker-block label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.picker-icon.large {
+  width: 96px;
+  height: 96px;
+}
+.character-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.character-name {
+  font-family: 'HYWenHei', system-ui, sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.025em;
+  line-height: 1.15;
+
+  display: block;
+  max-width: 420px;        /* prevents extreme stretching */
+  white-space: normal;     /* allow wrapping */
+  word-break: normal;
+  overflow-wrap: break-word;
+
+  text-align: left;
+}
+
+.character-name:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+/* Hide the real select, but keep it functional */
+#featuredSelect {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Hide support character selects, same behavior as featured */
+#support1Select,
+#support2Select,
+#support3Select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.featured-constellation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.featured-constellation span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.art-offset-slider {
+  width: 30%;
+  margin-top: 6px;
+}
+
+.featured .art {
+  width: 240px;
+  height: 480px;        /* Reduced height */
+  border-radius: 10px;
+  overflow: visible;
+  flex-shrink: 0;
+
+}
+.featured.element-theme::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background: linear-gradient(
+    180deg,
+    hsla(var(--element-hue), 55%, 55%, 0.18),
+    hsla(var(--element-hue), 55%, 55%, 0.05)
+  );
+
+  transition: opacity 0.35s ease;
+  z-index: 0;
+}
+
+.featured.element-theme .art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at top,
+      hsla(var(--element-hue), 60%, 60%, 0.12),
+      transparent 60%
+    );
+  pointer-events: none;
+}
+
+.featured > * {
+  position: relative;
+  z-index: 1;
+}
+
+.featured-region img {
+  width: 100px;
+  height: 100px;
+}
+
+.featured-region span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.support-card.element-theme::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    hsla(var(--element-hue), 55%, 55%, 0.14),
+    hsla(var(--element-hue), 55%, 55%, 0.04)
+  );
+
+  z-index: 0;
+}
+
+.support-card {
+  position: relative;
+}
+
+.support-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.support-card.is-active {
+  z-index: 50; /* above featured overlays */
+}
+
+#picker-portal {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+#picker-portal .picker-menu {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.team-name {
+  font-family: 'HYWenHei', system-ui, sans-serif;
+  font-size: 22px;
+  font-style: italic;
+
+  color: #e6eef6;
+  opacity: 0.9;
+
+  text-align: right;
+  align-self: flex-end;
+
+  cursor: text;
+  user-select: text;
+
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.team-name:hover {
+  background: rgba(255,255,255,0.04);
+  opacity: 1;
+}
+
+.team-name:focus {
+  outline: none;
+}
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="pane left">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="display:flex;flex-direction:column">
+          <h1>Ascension Arc — Team Builder</h1>
+          <div style="font-size:13px;color:var(--muted)">Version 1.0 - Patch "Luna III"</div>
+        </div>
+        <div
+          id="teamName"
+          class="team-name"
+          contenteditable="true"
+          spellcheck="false"
+        >
+          Ascension Arc Team
+        </div>
+      </div>
+
+      <div class="featured pane" style="padding:12px">
+        <div id="featuredArt" class="art">
+  <!-- sliders overlay -->
+  <div class="art-controls">
+  <input
+    id="featuredArtOffsetX"
+    type="range"
+    min="0"
+    max="100"
+    value="50"
+    title="Horizontal position"
+  />
+  <input
+    id="featuredArtOffsetY"
+    type="range"
+    min="0"
+    max="100"
+    value="50"
+    title="Vertical position"
+  />
+  <input
+    id="featuredArtZoom"
+    type="range"
+    min="100"
+    max="160"
+    value="100"
+    title="Zoom"
+  />
+</div>
+</div>
+
+        <div class="info">
+          <div class="featured-name">
+            <div class="character-picker">
+              <span id="featuredName" class="character-name">Select Character</span>
+              <span id="featuredSubtitle" class="character-subtitle"></span>
+              <select id="featuredSelect"></select>
+  </div>
+
+
+<div class="featured-right">
+  <div class="featured-constellation">
+    <img
+      id="featuredConstIcon"
+      src="images/cons/0.png"
+      alt="Constellation"
+      class="const-icon"
+    />
+    <span>Constellation</span>
+  </div>
+
+  <div id="featuredElement" class="featured-element"></div>
+  <div id="featuredRegion" class="featured-region"></div>
+  <div id="featuredAffiliation" class="featured-affiliation"></div>
+
+</div>
+</div>
+
+<div class="featured-progress">
+
+<div class="progress-row overall">
+  <label>Overall</label>
+
+  <!-- Rank icon -->
+  <img
+    id="progressOverallIcon"
+    src="images/ratings/C.png"
+    data-progress="overall"
+    class="progress-icon"
+  />
+
+  <!-- Clickable percentage -->
+  <span
+    id="progressOverallPercent"
+    class="progress-percent-text"
+    data-value="72"
+  >
+    72%
+  </span>
+</div>
+
+  <!-- Artifact -->
+  <div class="progress-row">
+  <label>Artifacts</label>
+
+  <img
+    id="progressArtifact"
+    src="images/ratings/A.png"
+    data-progress="artifact"
+    class="progress-icon"
+  />
+
+  <span
+    id="progressArtifactPercent"
+    class="progress-percent-text"
+    data-value="85"
+  >
+    85%
+  </span>
+</div>
+
+  <!-- Level -->
+<div class="progress-row">
+  <label>Level</label>
+
+  <img
+    id="progressLevel"
+    src="images/ratings/A.png"
+    data-progress="level"
+    class="progress-icon"
+  />
+
+  <span
+    id="progresslevelPercent"
+    class="progress-percent-text"
+    data-value="85"
+  >
+    85%
+  </span>
+</div>
+
+<!-- Talents -->
+<div class="progress-row">
+  <label>Talents</label>
+
+  <img
+    id="progressTalents"
+    src="images/ratings/A.png"
+    data-progress="talent"
+    class="progress-icon"
+  />
+
+  <span
+    id="progressTalentPercent"
+    class="progress-percent-text"
+    data-value="85"
+  >
+    85%
+  </span>
+</div>
+
+<!-- Weapon -->
+<div class="progress-row">
+  <label>Weapon</label>
+
+  <img
+    id="progressWeapon"
+    src="images/ratings/A.png"
+    data-progress="Weapon"
+    class="progress-icon"
+  />
+
+  <span
+    id="progressWeaponPercent"
+    class="progress-percent-text"
+    data-value="85"
+  >
+    85%
+  </span>
+</div>
+
+</div>
+
+<div class="featured-pickers">
+
+  <!-- ROLE -->
+  <div class="picker-block">
+  <div class="icon-picker">
+    <img
+      id="featuredRoleIcon"
+      class="picker-icon large"
+      src="images/roles/on-field-dps.png"
+      alt="Select role"
+    />
+    <div id="featuredRoleMenu" class="picker-menu hidden"></div>
+  </div>
+  <label id="featuredRoleLabel">Role</label>
+</div>
+
+  <!-- WEAPON -->
+  <div class="picker-block">
+  <div class="icon-picker">
+    <img
+      id="featuredWeaponIcon"
+      class="picker-icon large"
+      src="images/ui/weapon-placeholder.png"
+      alt="Select weapon"
+    />
+    <div
+      id="featuredWeaponMenu"
+      class="picker-menu hidden"
+    ></div>
+  </div>
+  <label id="featuredWeaponLabel">Weapon</label>
+</div>
+
+  <!-- ARTIFACT -->
+  <div class="picker-block">
+  <div class="icon-picker">
+    <img
+      id="featuredArtifactIcon"
+      class="picker-icon large"
+      src="images/ui/artifact-placeholder.png"
+      alt="Select artifact set"
+    />
+    <div
+      id="featuredArtifactMenu"
+      class="picker-menu hidden"
+    ></div>
+  </div>
+  <label id="featuredArtifactLabel">Artifact</label>
+</div>
+
+</div>
+
+
+        </div>
+      </div>
+
+      <div class="team-controls">
+        <div class="rating-grid">
+
+    <div class="rating-categories">
+      <div class="rating-row" data-category="fun">
+        <span>Fun</span>
+        <img class="rating-icon" data-category="fun" src="images/ratings/F.png" />
+      </div>
+      <div class="rating-row" data-category="difficulty">
+        <span>Difficulty</span>
+        <img class="rating-icon" data-category="difficulty" src="images/ratings/F.png" />
+      </div>
+      <div class="rating-row" data-category="exploration">
+        <span>Exploration</span>
+        <img class="rating-icon" data-category="exploration" src="images/ratings/F.png" />
+      </div>
+      <div class="rating-row" data-category="late-game">
+        <span>Late Game</span>
+        <img class="rating-icon" data-category="late-game" src="images/ratings/F.png" />
+      </div>
+      <div class="rating-row" data-category="investment">
+        <span>Investment</span>
+        <img class="rating-icon" data-category="investment" src="images/ratings/F.png" />
+      </div>
+    </div>
+
+    <div class="rating-final">
+      <span>Final Rating</span>
+      <img id="finalRatingIcon" src="images/ratings/F.png" />
+    </div>
+
+  </div>
+</div>
+
+    </div>
+
+    <div class="pane right">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="display:flex;flex-direction:column">
+          <div style="font-size:13px;color:var(--muted)">Give Zerwolf a subscribe on youtube. I took time out of my life for this.</div>
+        </div>
+
+      </div>
+
+
+<div class="support-card" id="support1">
+
+  <!-- Portrait (spans rows) -->
+  <div class="support-portrait">
+    <img id="support1Image" src="images/ui/character-placeholder.png" />
+  </div>
+
+  <!-- Row 1: Name + Constellation -->
+  <div class="support-top">
+  <div class="character-picker">
+    <span id="support1Name" class="support-name">Select Character</span>
+    <select id="support1Select"></select>
+  </div>
+
+  <img
+    id="support1ConstIcon"
+    class="support-const"
+    src="images/cons/0.png"
+    alt="Constellation"
+  />
+
+  <div class="support-element" id="support1Element"></div>
+</div>
+
+  <!-- Row 2: Role / Weapon / Artifact -->
+  <div class="support-bottom">
+
+    <!-- ROLE -->
+    <div class="support-picker">
+      <img id="support1RoleIcon" />
+      <span id="support1RoleLabel">Role</span>
+      <div id="support1RoleMenu" class="picker-menu hidden"></div>
+    </div>
+
+    <!-- WEAPON -->
+    <div class="support-picker">
+      <img id="support1WeaponIcon" />
+      <span id="support1WeaponLabel">Weapon</span>
+      <div id="support1WeaponMenu" class="picker-menu hidden"></div>
+    </div>
+
+    <!-- ARTIFACT -->
+    <div class="support-picker">
+      <img id="support1ArtifactIcon" />
+      <span id="support1ArtifactLabel">Artifact</span>
+      <div id="support1ArtifactMenu" class="picker-menu hidden"></div>
+    </div>
+
+  </div>
+
+</div>
+
+        <!-- duplicate support cards for index 1 and 2 -->     
+<div class="support-card" id="support2">
+
+  <!-- Portrait (spans rows) -->
+  <div class="support-portrait">
+    <img id="support2Image" src="images/ui/character-placeholder.png" />
+  </div>
+
+  <!-- Row 1: Name + Constellation -->
+<div class="support-top">
+  <div class="character-picker">
+    <span id="support2Name" class="support-name">Select Character</span>
+    <select id="support2Select"></select>
+  </div>
+
+  <img
+    id="support2ConstIcon"
+    class="support-const"
+    src="images/cons/0.png"
+    alt="Constellation"
+  />
+
+  <div class="support-element" id="support2Element"></div>
+</div>
+
+  <!-- Row 2: Role / Weapon / Artifact -->
+  <div class="support-bottom">
+
+    <!-- ROLE -->
+    <div class="support-picker">
+      <img id="support2RoleIcon" />
+      <span id="support2RoleLabel">Role</span>
+      <div id="support2RoleMenu" class="picker-menu hidden"></div>
+    </div>
+
+    <!-- WEAPON -->
+    <div class="support-picker">
+      <img id="support2WeaponIcon" />
+      <span id="support2WeaponLabel">Weapon</span>
+      <div id="support2WeaponMenu" class="picker-menu hidden"></div>
+    </div>
+
+    <!-- ARTIFACT -->
+    <div class="support-picker">
+      <img id="support2ArtifactIcon" />
+      <span id="support2ArtifactLabel">Artifact</span>
+      <div id="support2ArtifactMenu" class="picker-menu hidden"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="support-card" id="support3">
+
+  <!-- Portrait (spans rows) -->
+  <div class="support-portrait">
+    <img id="support3Image" src="images/ui/character-placeholder.png" />
+  </div>
+
+  <!-- Row 1: Name + Constellation -->
+<div class="support-top">
+  <div class="character-picker">
+    <span id="support3Name" class="support-name">Select Character</span>
+    <select id="support3Select"></select>
+  </div>
+
+  <img
+    id="support3ConstIcon"
+    class="support-const"
+    src="images/cons/0.png"
+    alt="Constellation"
+  />
+
+  <div class="support-element" id="support3Element"></div>
+</div>
+
+  <!-- Row 2: Role / Weapon / Artifact -->
+  <div class="support-bottom">
+
+    <!-- ROLE -->
+    <div class="support-picker">
+      <img id="support3RoleIcon" />
+      <span id="support3RoleLabel">Role</span>
+      <div id="support3RoleMenu" class="picker-menu hidden"></div>
+    </div>
+
+    <!-- WEAPON -->
+    <div class="support-picker">
+      <img id="support3WeaponIcon" />
+      <span id="support3WeaponLabel">Weapon</span>
+      <div id="support3WeaponMenu" class="picker-menu hidden"></div>
+    </div>
+
+    <!-- ARTIFACT -->
+    <div class="support-picker">
+      <img id="support3ArtifactIcon" />
+      <span id="support3ArtifactLabel">Artifact</span>
+      <div id="support3ArtifactMenu" class="picker-menu hidden"></div>
+    </div>
+
+  </div>
+
+</div>
+
+  <footer>Built for GitHub Pages • Pure HTML/CSS/JS • Replace placeholder images in <code>data/</code> or update <code>characters</code> JSON</footer>
+
+  <script src="characters.js"></script>
+  <script src="weapons.js"></script>
+  <script src="artifacts.js"></script>
+
+<script>
+/* ===============================
+   UI LOGIC
+   =============================== */
+
+const selectedWeapons = {
+  featured: null,
+  supports: {}
+};
+
+const selectedArtifacts = {
+  featured: null,
+  supports: {}
+};
+
+function makeOption(val, text) {
+  const o = document.createElement('option');
+  o.value = val;
+  o.textContent = text;
+  return o;
+}
+
+function iconForElement(el) {
+  const map = {
+    Pyro: '🔥', Hydro: '💧', Anemo: '🌪️',
+    Electro: '⚡', Cryo: '❄️', Geo: '⛰️', Dendro: '🌿'
+  };
+  return map[el] || '—';
+}
+
+function populateWeaponDropdown(selectEl, weaponType) {
+  if (!selectEl) return;
+
+  selectEl.innerHTML = '';
+
+  // Convert "Sword" → "sword", etc.
+  const typeKey = weaponType.toLowerCase();
+  const weaponList = weaponsByType[typeKey] || [];
+
+  weaponList.forEach(w => {
+    const option = document.createElement('option');
+    option.value = w.id;
+    option.textContent = `${w.name} (${w.rarity}★)`;
+    selectEl.appendChild(option);
+  });
+
+  // Safety fallback if something goes wrong
+  if (weaponList.length === 0) {
+    const opt = document.createElement('option');
+    opt.textContent = 'No compatible weapons';
+    opt.disabled = true;
+    selectEl.appendChild(opt);
+  }
+}
+
+function getFeaturedCharacterImage(character) {
+  return `images/characters/featured/${character.element.toLowerCase()}/${character.id}.png`;
+}
+
+function buildArtifactPicker(menuEl, iconEl, onSelect) {
+  menuEl.innerHTML = '';
+
+  artifacts.forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+
+    const img = document.createElement('img');
+    img.src = getArtifactImage(a);
+    img.alt = a.name;
+
+    item.appendChild(img);
+
+    item.addEventListener('click', () => {
+      iconEl.src = img.src;
+      iconEl.dataset.artifactId = a.id;
+      menuEl.classList.add('hidden');
+      onSelect && onSelect(a);
+    });
+
+    menuEl.appendChild(item);
+  });
+}
+
+const artOffsetX = document.getElementById('featuredArtOffsetX');
+const artOffsetY = document.getElementById('featuredArtOffsetY');
+
+artOffsetX.addEventListener('input', e => {
+  const val = (e.target.value - 50) * 2; // -100 → 100 px
+  document
+    .getElementById('featuredArt')
+    .style.setProperty('--art-tx', `${val}px`);
+});
+
+artOffsetY.addEventListener('input', e => {
+  const val = (e.target.value - 50) * 2; // -100 → 100 px
+  document
+    .getElementById('featuredArt')
+    .style.setProperty('--art-ty', `${val}px`);
+});
+
+const artZoom = document.getElementById('featuredArtZoom');
+
+artZoom.addEventListener('input', e => {
+  document
+    .getElementById('featuredArt')
+    .style.setProperty('--art-zoom', e.target.value / 100);
+});
+
+function buildWeaponPicker(menuEl, iconEl, weaponType, onSelect) {
+  menuEl.innerHTML = '';
+  console.log('Weapon type:', weaponType, '=>', weaponsByType[weaponType.toLowerCase()]);
+
+  const key = weaponType.toLowerCase();
+  const list = weaponsByType[key] || [];
+
+  list.forEach(w => {
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+
+    const img = document.createElement('img');
+    img.src = w.image;
+    img.alt = w.name;
+
+    const rarity = document.createElement('span');
+    rarity.textContent = `${w.rarity}★`;
+
+    item.appendChild(img);
+    item.appendChild(rarity);
+
+    item.addEventListener('click', () => {
+      iconEl.src = w.image;
+      iconEl.dataset.weaponId = w.id;
+      menuEl.classList.add('hidden');
+      if (onSelect) onSelect(w);
+    });
+
+    menuEl.appendChild(item);
+  });
+}
+
+function getCurrentTeamState() {
+  return {
+    teamName: document.getElementById('teamName').textContent || '',
+
+    featured: {
+      characterId: document.getElementById('featuredSelect').value,
+      weapon: selectedWeapons.featured?.id || null,
+      artifact: selectedArtifacts.featured?.id || null,
+      role: featuredRole,
+      constellation: featuredConstellation,
+      progress: { ...progressRatings }
+    },
+
+    supports: ['1','2','3'].map(slot => ({
+      characterId: document.getElementById(`support${slot}Select`).value,
+      role: document.getElementById(`support${slot}RoleLabel`).textContent,
+      weapon: document.getElementById(`support${slot}WeaponLabel`).textContent,
+      artifact: document.getElementById(`support${slot}ArtifactLabel`).textContent
+    })),
+
+    teamRatings: { ...teamRatings }
+  };
+}
+
+function loadTeam(slot) {
+  const raw = localStorage.getItem(`ascensionArc_${slot}`);
+  if (!raw) return;
+
+  const state = JSON.parse(raw);
+
+  // Team name
+  document.getElementById('teamName').textContent = state.teamName || 'Ascension Arc Team';
+
+  // Featured
+  document.getElementById('featuredSelect').value = state.featured.characterId;
+  setFeatured(state.featured.characterId);
+
+  featuredConstellation = state.featured.constellation || 0;
+  document.getElementById('featuredConstIcon').src =
+    `images/cons/${featuredConstellation}.png`;
+
+  featuredRole = state.featured.role;
+
+  if (state.featured.weapon) {
+    const w = weapons.find(x => x.id === state.featured.weapon);
+    if (w) {
+      selectedWeapons.featured = w;
+      document.getElementById('featuredWeaponIcon').src = getWeaponImage(w);
+      document.getElementById('featuredWeaponLabel').textContent = w.name;
+    }
+  }
+
+  if (state.featured.artifact) {
+    const a = artifacts.find(x => x.id === state.featured.artifact);
+    if (a) {
+      selectedArtifacts.featured = a;
+      document.getElementById('featuredArtifactIcon').src = getArtifactImage(a);
+      document.getElementById('featuredArtifactLabel').textContent = a.name;
+    }
+  }
+
+  setProgress(state.featured.progress || {});
+
+  // Supports
+  state.supports.forEach((s, i) => {
+    const slotId = i + 1;
+    document.getElementById(`support${slotId}Select`).value = s.characterId;
+    setSupport(slotId, s.characterId);
+
+    document.getElementById(`support${slotId}RoleLabel`).textContent = s.role;
+    document.getElementById(`support${slotId}WeaponLabel`).textContent = s.weapon;
+    document.getElementById(`support${slotId}ArtifactLabel`).textContent = s.artifact;
+  });
+
+  // Team ratings
+  Object.entries(state.teamRatings || {}).forEach(([k,v]) => {
+    teamRatings[k] = v;
+    const el =
+      k === 'final'
+        ? document.getElementById('finalRatingIcon')
+        : document.querySelector(`.rating-icon[data-category="${k}"]`);
+
+    if (el) el.src = `images/ratings/${v}.png`;
+  });
+
+  console.log(`Loaded team from ${slot}`, state);
+}
+
+function saveTeam(slot) {
+  const state = getCurrentTeamState();
+  localStorage.setItem(`ascensionArc_${slot}`, JSON.stringify(state));
+  console.log(`Saved team to ${slot}`, state);
+}
+
+function setupUI() {
+  const featuredSelect = document.getElementById('featuredSelect');
+  const supportSelects = document.querySelectorAll('.supportSelect');
+
+  featuredSelect.innerHTML = '';
+  supportSelects.forEach(s => s.innerHTML = '');
+
+characters.forEach(ch => {
+  featuredSelect.appendChild(
+    makeOption(ch.id, ch.name)
+  );
+  supportSelects.forEach(sel =>
+    sel.appendChild(
+      makeOption(ch.id, ch.name)
+    )
+  );
+});
+  featuredSelect.addEventListener('change', e => setFeatured(e.target.value));
+  supportSelects.forEach(sel =>
+    sel.addEventListener('change', e =>
+      updateSupport(e.target.dataset.index, e.target.value)
+    )
+  );
+
+
+  // Initial selection
+  if (characters.length > 0) {
+    featuredSelect.value = characters[0].id;
+    setFeatured(characters[0].id);
+
+    supportSelects.forEach((sel, i) => {
+      sel.selectedIndex = (i + 1) % characters.length;
+      updateSupport(i, sel.value);
+    });
+  }
+}
+
+document.addEventListener('click', e => {
+  const el = e.target;
+
+  if (!el.classList.contains('progress-percent-text')) return;
+
+  const current = parseInt(el.dataset.value || '0', 10);
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = 1;
+  input.max = 100;
+  input.value = current;
+  input.className = 'progress-percent';
+  input.style.width = '64px';
+
+  el.replaceWith(input);
+  input.focus();
+
+  function commit() {
+    const val = Math.max(1, Math.min(100, parseInt(input.value || '1', 10)));
+    el.dataset.value = val;
+    el.textContent = `${val}%`;
+    input.replaceWith(el);
+  }
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') commit();
+    if (ev.key === 'Escape') input.replaceWith(el);
+  });
+});
+
+function setFeatured(id) {
+  const ch = characters.find(c => c.id === id);
+  if (!ch) return;
+
+  // 🔥 Apply element theme to featured card
+const featuredCard = document.querySelector('.featured');
+
+featuredCard.classList.remove(
+  'element-pyro','element-hydro','element-anemo',
+  'element-electro','element-cryo','element-geo','element-dendro'
+);
+
+featuredCard.classList.add(
+  'element-theme',
+  `element-${ch.element.toLowerCase()}`
+);
+
+  // ✅ Update visible character name
+  document.getElementById('featuredName').textContent = ch.name;
+
+  const subtitleEl = document.getElementById('featuredSubtitle');
+  subtitleEl.textContent = ch.subtitle || '';
+
+  // Portrait
+const art = document.getElementById('featuredArt');
+// Remove only the previous image, keep controls
+const oldImg = art.querySelector('img');
+if (oldImg) oldImg.remove();
+  artOffsetX.value = 50;
+  artOffsetY.value = 50;
+  artZoom.value = 100;
+
+  art.style.setProperty('--art-tx', '0px');
+  art.style.setProperty('--art-ty', '0px');
+  art.style.setProperty('--art-zoom', '1');
+
+  const img = document.createElement('img');
+  img.src = getFeaturedCharacterImage(ch);
+  img.alt = ch.name;
+  img.onerror = () => img.remove();
+  art.appendChild(img);
+
+  // Element badge
+  document.getElementById('featuredElement').innerHTML = `
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <img
+     src="images/elements/${ch.element.toLowerCase()}.png"
+      alt="${ch.element}"
+    />
+    <span style="font-size:12px;color:var(--muted)">${ch.element}</span>
+  </div>
+`;
+
+// Region Badge
+if (ch.region) {
+  document.getElementById('featuredRegion').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <img
+        src="images/emblem/${ch.region.toLowerCase()}.png"
+        alt="${ch.region}"
+      />
+      <span style="font-size:12px;color:var(--muted)">${ch.region}</span>
+    </div>
+  `;
+} else {
+  document.getElementById('featuredRegion').innerHTML = '';
+}
+
+// Affiliation Badge
+if (ch.affiliation) {
+  document.getElementById('featuredAffiliation').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <img
+        src="images/affiliation/${ch.affiliation.toLowerCase()}.png"
+        alt="${ch.affiliation}"
+      />
+      <span style="font-size:12px;color:var(--muted)">
+        ${ch.affiliation}
+      </span>
+    </div>
+  `;
+} else {
+  document.getElementById('featuredAffiliation').innerHTML = '';
+}
+
+  // 🔥 WEAPON FILTERING
+const featuredWeaponIcon = document.getElementById('featuredWeaponIcon');
+const featuredWeaponMenu = document.getElementById('featuredWeaponMenu');
+
+featuredWeaponIcon.onclick = () => {
+  featuredWeaponMenu.classList.toggle('hidden');
+};
+
+selectedWeapons.featured = null;
+featuredWeaponIcon.src = 'images/ui/weapon-placeholder.png';
+
+buildWeaponPicker(
+  featuredWeaponMenu,
+  featuredWeaponIcon,
+  ch.weaponType,
+  weapon => {
+    selectedWeapons.featured = weapon;
+    document.getElementById('featuredWeaponLabel').textContent = weapon.name;
+    featuredWeaponMenu.classList.add('hidden');
+  }
+);
+
+// 🔥 FEATURED ROLE PICKER
+const featuredRoleIcon = document.getElementById('featuredRoleIcon');
+const featuredRoleMenu = document.getElementById('featuredRoleMenu');
+
+featuredRoleIcon.onclick = () => {
+  featuredRoleMenu.classList.toggle('hidden');
+};
+
+buildRolePicker(featuredRoleMenu, featuredRoleIcon, role => {
+  featuredRole = role.id;
+  document.getElementById('featuredRoleLabel').textContent = role.name;
+  featuredRoleMenu.classList.add('hidden');
+});
+
+setProgress({
+  overallPercent: 72,
+  overallRank: 'B',
+  artifact: 'A',
+  level: 'S',
+  talents: 'B',
+  weapon: 'A'
+});
+
+
+}
+
+function setProgress({
+  overallPercent = 0,
+  overallRank = 'C',
+  artifact = 'C',
+  level = 'C',
+  talents = 'C',
+  weapon = 'C'
+}) {
+  const percentEl = document.getElementById('progressOverallPercent');
+  percentEl.dataset.value = overallPercent;
+  percentEl.textContent = `${overallPercent}%`;
+
+  document.getElementById('progressOverallIcon').src =
+    `images/ratings/${overallRank}.png`;
+
+  document.getElementById('progressArtifact').src =
+    `images/ratings/${artifact}.png`;
+
+  document.getElementById('progressLevel').src =
+    `images/ratings/${level}.png`;
+
+  document.getElementById('progressTalents').src =
+    `images/ratings/${talents}.png`;
+
+  document.getElementById('progressWeapon').src =
+    `images/ratings/${weapon}.png`;
+}
+
+const artifactIcon = document.getElementById('featuredArtifactIcon');
+const artifactMenu = document.getElementById('featuredArtifactMenu');
+
+artifactIcon.onclick = () => {
+  artifactMenu.classList.toggle('hidden');
+};
+
+buildArtifactPicker(artifactMenu, artifactIcon, artifact => {
+  selectedArtifacts.featured = artifact;
+
+  document.getElementById('featuredArtifactLabel').textContent = artifact.name;
+});
+
+// Restore selection
+if (selectedArtifacts.featured) {
+  artifactIcon.src = getArtifactImage(selectedArtifacts.featured);
+}
+
+function setSupport(slot, characterId) {
+  const ch = characters.find(c => c.id === characterId);
+  if (!ch) return;
+
+  // 🔥 Apply element theme to support card
+  const supportCard = document.getElementById(`support${slot}`);
+
+  supportCard.classList.remove(
+  'element-pyro','element-hydro','element-anemo',
+  'element-electro','element-cryo','element-geo','element-dendro',
+  'element-theme'
+);
+
+
+  supportCard.classList.add(
+  'element-theme',
+  `element-${ch.element.toLowerCase()}`
+);
+
+  // Portrait
+  document.getElementById(`support${slot}Image`).src =
+    getCharacterImage(ch);
+
+  // Name
+  document.getElementById(`support${slot}Name`).textContent =
+    ch.name;
+
+  // Element
+  document.getElementById(`support${slot}Element`).innerHTML = `
+    <img src="images/elements/${ch.element.toLowerCase()}.png" />
+  `;
+
+  /* =====================
+     Constellation
+     ===================== */
+  let constellation = 0;
+  const constIcon = document.getElementById(`support${slot}ConstIcon`);
+  constIcon.src = `images/cons/${constellation}.png`;
+
+  constIcon.onclick = () => {
+    constellation = (constellation + 1) % 7;
+    constIcon.src = `images/cons/${constellation}.png`;
+  };
+
+  /* =====================
+     Reset labels
+     ===================== */
+  document.getElementById(`support${slot}RoleLabel`).textContent = 'Role';
+  document.getElementById(`support${slot}WeaponLabel`).textContent = 'Weapon';
+  document.getElementById(`support${slot}ArtifactLabel`).textContent = 'Artifact';
+
+  /* =====================
+     ROLE
+     ===================== */
+const roleIcon = document.getElementById(`support${slot}RoleIcon`);
+const roleMenu = document.getElementById(`support${slot}RoleMenu`);
+
+roleIcon.onclick = () => {
+  const portal = document.getElementById('picker-portal');
+
+  // Move menu to portal
+  portal.appendChild(roleMenu);
+
+  const rect = roleIcon.getBoundingClientRect();
+
+  roleMenu.style.left = `${rect.left}px`;
+  roleMenu.style.top = `${rect.bottom + 8}px`;
+
+roleMenu.classList.remove('hidden');
+supportCard.classList.add('is-active');
+};
+
+buildRolePicker(roleMenu, roleIcon, role => {
+  document.getElementById(`support${slot}RoleLabel`).textContent = role.name;
+
+  roleMenu.classList.add('hidden');
+  document.getElementById('picker-portal').appendChild(roleMenu);
+
+  supportCard.classList.remove('is-active');
+});
+
+  /* =====================
+     WEAPON
+     ===================== */
+const weaponIcon = document.getElementById(`support${slot}WeaponIcon`);
+const weaponMenu = document.getElementById(`support${slot}WeaponMenu`);
+
+weaponIcon.onclick = () => {
+  const portal = document.getElementById('picker-portal');
+
+  // Move menu to portal
+  portal.appendChild(weaponMenu);
+
+  const rect = weaponIcon.getBoundingClientRect();
+
+  weaponMenu.style.left = `${rect.left}px`;
+  weaponMenu.style.top = `${rect.bottom + 8}px`;
+
+ weaponMenu.classList.remove('hidden');
+supportCard.classList.add('is-active');
+};
+buildWeaponPicker(
+  weaponMenu,
+  weaponIcon,
+  ch.weaponType,
+  weapon => {
+    document.getElementById(`support${slot}WeaponLabel`).textContent =
+      weapon.name;
+      supportCard.classList.remove('is-active');
+
+  }
+);
+
+  /* =====================
+     ARTIFACT
+     ===================== */
+const artifactIcon = document.getElementById(`support${slot}ArtifactIcon`);
+const artifactMenu = document.getElementById(`support${slot}ArtifactMenu`);
+
+artifactIcon.onclick = () => {
+  const portal = document.getElementById('picker-portal');
+
+  // Move menu to portal
+  portal.appendChild(artifactMenu);
+
+  const rect = artifactIcon.getBoundingClientRect();
+
+  artifactMenu.style.left = `${rect.left}px`;
+  artifactMenu.style.top = `${rect.bottom + 8}px`;
+
+artifactMenu.classList.remove('hidden');
+supportCard.classList.add('is-active');
+};
+
+buildArtifactPicker(artifactMenu, artifactIcon, artifact => {
+  document.getElementById(`support${slot}ArtifactLabel`).textContent =
+    artifact.name;
+
+  artifactMenu.classList.add('hidden');
+  document.getElementById('picker-portal').appendChild(artifactMenu);
+
+  supportCard.classList.remove('is-active');
+});
+}
+
+const ratingValues = ['F','D','C','B','A','S'];
+const teamRatings = {
+  fun: 'F',
+  difficulty: 'F',
+  exploration: 'F',
+  'late-game': 'F',
+  investment: 'F',
+  final: 'F'
+};
+
+function cycleRating(category, imgEl) {
+  const current = teamRatings[category];
+  const idx = ratingValues.indexOf(current);
+  const next = ratingValues[(idx + 1) % ratingValues.length];
+  teamRatings[category] = next;
+  imgEl.src = `images/ratings/${next}.png`;
+  
+}
+
+// Category ratings
+document.querySelectorAll('.rating-icon').forEach(icon => {
+  icon.addEventListener('click', () => {
+    const cat = icon.dataset.category;
+    cycleRating(cat, icon);
+  });
+});
+
+// Final rating
+const finalIcon = document.getElementById('finalRatingIcon');
+finalIcon.addEventListener('click', () => {
+  cycleRating('final', finalIcon);
+});
+
+let featuredConstellation = 0;
+
+const constIcon = document.getElementById('featuredConstIcon');
+
+constIcon.addEventListener('click', () => {
+  featuredConstellation = (featuredConstellation + 1) % 7;
+  constIcon.src = `images/cons/${featuredConstellation}.png`;
+});
+
+const roles = [
+  { id:'on-field-dps', name:'On-Field DPS' },
+  { id:'off-field-dps', name:'Off-Field DPS' },
+  { id:'support', name:'Support' },
+  { id:'healer', name:'Healer' },
+  { id:'grouper', name:'Grouper' }
+];
+
+const progressRatings = {
+  overall: 'C',
+  artifact: 'C',
+  level: 'C',
+  talents: 'C',
+  weapon: 'C'
+};
+
+document.querySelectorAll('.progress-icon').forEach(icon => {
+  icon.addEventListener('click', () => {
+    const key = icon.dataset.progress;
+    const current = progressRatings[key];
+    const idx = ratingValues.indexOf(current);
+    const next = ratingValues[(idx + 1) % ratingValues.length];
+
+    progressRatings[key] = next;
+    icon.src = `images/ratings/${next}.png`;
+  });
+});
+
+let featuredRole = roles[0].id;
+
+function buildRolePicker(menuEl, iconEl, onSelect) {
+  menuEl.innerHTML = '';
+
+  roles.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+
+    const img = document.createElement('img');
+    img.src = `images/roles/${r.id}.png`;
+    img.alt = r.name;
+
+    item.appendChild(img);
+
+    item.onclick = () => {
+      iconEl.src = img.src;
+      menuEl.classList.add('hidden');
+      if (onSelect) onSelect(r);
+    };
+
+    menuEl.appendChild(item);
+  });
+}
+
+document
+  .getElementById('progressOverallPercent')
+  .addEventListener('input', e => {
+    e.target.value = Math.max(1, Math.min(100, e.target.value));
+  });
+
+['1','2','3'].forEach(slot => {
+  const sel = document.getElementById(`support${slot}Select`);
+  if (!sel) return;
+
+  sel.innerHTML = '';
+  characters.forEach(ch => {
+    sel.appendChild(makeOption(ch.id, ch.name));
+  });
+
+  sel.addEventListener('change', e => {
+    setSupport(slot, e.target.value);
+  });
+});
+
+// INIT
+setupUI();
+</script>
+<div id="picker-portal"></div>
+</body>
+</html>
